@@ -53,5 +53,7 @@ class ofApp : public ofBaseApp{
 		int dropped; 
 	
 	unsigned long long lastMouseMoved;
+	int exporting;
+	int exportFrameNum; 
 	string fileToLoad;
 };

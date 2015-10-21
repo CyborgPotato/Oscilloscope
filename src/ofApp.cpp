@@ -17,6 +17,7 @@ void ofApp::setup(){
 	table.load("testomat.png");
 	changed = false;
 	clearFbos = false;
+	exporting = 0;
 	lastMouseMoved = 0;
 	ofSetVerticalSync(true);
 	ofBackground(0);
@@ -115,6 +116,42 @@ void ofApp::update(){
 	// nasty hack. OF seems to get width+height wrong on the first frame.
 	if( ofGetFrameNum() == 1 ){
 		windowResized(ofGetWidth(), ofGetHeight());
+	}
+	
+	if( exporting == 1 ){
+		// begin!
+		// make sure the audio thread is flushed.
+		ofSleepMillis(1000);
+		exporting = 2;
+		globals.player.setPositionMS(0);
+		globals.player.setLoop(false);
+		globals.player.play();
+		
+		// make sure we're at zero!
+		float output[2];
+		globals.player.audioOut(output, 1, 2);
+		globals.player.setPositionMS(0);
+		
+		exportFrameNum = -1;
+	}
+	
+	if( exporting == 2 ){
+		int targetTimeMS = exportFrameNum*1000.0/25.0;
+		while( globals.player.getPositionMS() < targetTimeMS ){
+			const int bufferSize = 512;
+			float output[2*bufferSize];
+			globals.player.audioOut(output, bufferSize, 2);
+			left.append(output, bufferSize,2);
+			right.append(output+1,bufferSize,2);
+		}
+		exportFrameNum ++;
+	}
+	
+	if( exporting == 2 && globals.player.isPlaying == false ){
+		// we're done!
+		exporting = 0;
+		globals.player.setLoop(true);
+		globals.player.play();
 	}
 	
 /*	if( ofGetElapsedTimeMillis()-lastMouseMoved > 5000 && globals.player.isPlaying ){
@@ -218,7 +255,12 @@ void ofApp::draw(){
 	
 	ofSetColor(255);
 	fbo.draw(0,0);
-	ofDrawBitmapString("Dropped: " + ofToString(dropped), 10, 20 );
+	//ofDrawBitmapString("Dropped: " + ofToString(dropped), 10, 20 );
+	
+	if( exporting == 2 ){
+		string filename = ofToDataPath("images/" + ofToString(exportFrameNum, 5, '0') + ".png");
+		ofSaveViewport(filename);
+	}
 }
 
 void exit_from_c(){
@@ -235,6 +277,10 @@ void ofApp::exit(){
 void ofApp::keyPressed  (int key){
 	lastMouseMoved = ofGetElapsedTimeMillis();
 	key = std::tolower(key);
+	
+	if( key == 'e' ){
+		exporting = 1;
+	}
 	
 	if( key == OF_KEY_ESC ){
 		osciView->fullscreenButton->clickAndNotify(false);
@@ -304,7 +350,7 @@ void ofApp::audioOut( float * output, int bufferSize, int nChannels ){
 		fileToLoad = "";
 	}
 	
-	if( globals.player.isLoaded ){
+	if( globals.player.isLoaded && exporting == 0 ){
 		globals.player.audioOut(output, bufferSize, nChannels);
 		
 		left.append(output, bufferSize,2);

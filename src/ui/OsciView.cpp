@@ -20,7 +20,7 @@ OsciView::OsciView( float x_, float y_, float width_, float height_)
 	add( stopButton );
 	
 	scaleLabel = addLabel( "Scale" );
-	scaleSlider = new mui::Slider( x, y, w, h, 0.1, 2, 1 );
+	scaleSlider = new mui::Slider( x, y, w, h, 0.1, 3, 1 );
 	y += scaleSlider->height + 10;
 	add( scaleSlider );
 	
